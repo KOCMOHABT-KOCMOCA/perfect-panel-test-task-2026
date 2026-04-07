@@ -1,0 +1,17 @@
+.git
+.gitignore
+.gitattributes
+.editorconfig
+.env
+.env.example
+.github/
+.dockerignore
+docker/
+docker-compose.yml
+phpunit.xml
+vite.config.js
+*.md
+node_modules/
+storage/logs/*
+bootstrap/cache/*
+public/hot
