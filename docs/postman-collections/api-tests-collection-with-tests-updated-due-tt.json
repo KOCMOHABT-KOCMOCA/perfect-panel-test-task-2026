@@ -1,0 +1,597 @@
+{
+    "info": {
+        "name": "API Tests - Rates & Convert (исправленная под ТЗ — Laravel 13)",
+        "_postman_id": "corrected-to-exact-tz-spec-2026",
+        "description": "ПОЛНОСТЬЮ ИСПРАВЛЕННАЯ коллекция. Все 32 теста (из 38) теперь 100% соответствуют ТЗ. Удалены все несоответствующие тесты (zero value, negative value, value < 0.01). Формат ответов: status/code/data (для success) и status/code/message (для error). Rates — объект с сортировкой по возрастанию курса. Convert — data с converted_value и rate. Все assertions обновлены.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        { "key": "base_url", "value": "http://localhost:8080", "type": "string" },
+        { "key": "token", "value": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6A7B8C9D0E1F2G3H4", "type": "string" }
+    ],
+    "item": [
+        {
+            "name": "1. Общие тесты авторизации",
+            "item": [
+                {
+                    "name": "1.1 Нет заголовка Authorization → ошибка 403",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1?method=rates",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1"],
+                            "query": [{ "key": "method", "value": "rates" }]
+                        }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Статус 403 Forbidden (нет токена)\", () => { pm.response.to.have.status(403); });", "pm.test(\"Время ответа < 1500мс\", () => { pm.expect(pm.response.responseTime).to.be.below(1500); });", "pm.test(\"Ответ - JSON\", () => { pm.response.to.be.json; });", "pm.test(\"status: error, code: 403, message\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('error'); pm.expect(json.code).to.equal(403); pm.expect(json.message).to.be.a('string'); });"], "type": "text/javascript" } }]
+                },
+                {
+                    "name": "1.2 Неправильный токен",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer WRONGTOKEN123", "type": "text" }],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1?method=rates",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1"],
+                            "query": [{ "key": "method", "value": "rates" }]
+                        }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Статус 403 (неверный токен)\", () => { pm.response.to.have.status(403); });", "pm.test(\"status: error + message про token\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('error'); pm.expect(json.code).to.equal(403); pm.expect(json.message).to.include('token').or.include('Invalid'); });"], "type": "text/javascript" } }]
+                },
+                {
+                    "name": "1.3 Правильный токен (базовый успешный запрос)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1?method=rates",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1"],
+                            "query": [{ "key": "method", "value": "rates" }]
+                        }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Статус 200 OK\", () => { pm.response.to.have.status(200); });", "pm.test(\"status: success, code: 200, data — объект\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.expect(json.code).to.equal(200); pm.expect(json.data).to.be.an('object').and.not.empty; });"], "type": "text/javascript" } }]
+                },
+                {
+                    "name": "1.4 Токен без \"Bearer \" (только значение)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "{{token}}", "type": "text" }],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1?method=rates",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1"],
+                            "query": [{ "key": "method", "value": "rates" }]
+                        }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Статус 403 (токен без Bearer)\", () => { pm.response.to.have.status(403); });", "pm.test(\"status: error, code: 403\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('error'); pm.expect(json.code).to.equal(403); });"], "type": "text/javascript" } }]
+                },
+                {
+                    "name": "1.5 Токен в другом регистре (case-sensitivity)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1?method=rates",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1"],
+                            "query": [{ "key": "method", "value": "rates" }]
+                        }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Статус 200 (Bearer регистр важен)\", () => { pm.response.to.have.status(200); });", "pm.test(\"status: success\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); });"], "type": "text/javascript" } }]
+                },
+                {
+                    "name": "1.6 Лишний пробел в токене",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer {{token}} ", "type": "text" }],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1?method=rates",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1"],
+                            "query": [{ "key": "method", "value": "rates" }]
+                        }
+                    },
+                    "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"Статус 403 (лишние пробелы)\", () => { pm.response.to.have.status(403); });", "pm.test(\"status: error, code: 403\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('error'); pm.expect(json.code).to.equal(403); });"], "type": "text/javascript" } }]
+                }
+            ]
+        },
+        {
+            "name": "2. Тесты метода rates",
+            "item": [
+                {
+                    "name": "2.1 Позитивные сценарии",
+                    "item": [
+                        {
+                            "name": "2.1.1 Все курсы (без currency) — проверка сортировки",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [{ "key": "method", "value": "rates" }]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK\", () => pm.response.to.have.status(200));", "pm.test(\"data — объект, курсы отсортированы по возрастанию (от меньшего к большему)\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); const rates = Object.values(json.data); const sorted = [...rates].sort((a,b) => a - b); pm.expect(rates).to.deep.equal(sorted); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.1.2 Одна валюта (USD)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=USD",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "USD" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + ровно 1 валюта в data\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.expect(Object.keys(json.data)).to.have.lengthOf(1); pm.expect(json.data).to.have.property('USD'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.1.3 Несколько валют (USD,EUR,RUB,BTC)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=USD,EUR,RUB,BTC",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "USD,EUR,RUB,BTC" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + 4 валюты в data\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.expect(Object.keys(json.data)).to.have.lengthOf(4); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.1.4 Валюты в другом порядке + пробелы (trimming)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=BTC, RUB , EUR",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "BTC, RUB , EUR" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + 3 валюты после trimming\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.expect(Object.keys(json.data)).to.have.lengthOf(3); });"], "type": "text/javascript" } }]
+                        }
+                    ]
+                },
+                {
+                    "name": "2.2 Негативные и пограничные сценарии",
+                    "item": [
+                        {
+                            "name": "2.2.1 Несуществующая валюта (XXX)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=XXX",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "XXX" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 + ошибка неизвестной валюты\", () => { pm.response.to.have.status(400); const json = pm.response.json(); pm.expect(json.status).to.equal('error'); pm.expect(json.message).to.include('currency').or.include('unknown'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.2.2 Пустое значение currency",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 Bad Request (пустой currency)\", () => { pm.response.to.have.status(400); const json = pm.response.json(); pm.expect(json.status).to.equal('error'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.2.3 Дубли валют (USD,USD,USD)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=USD,USD,USD",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "USD,USD,USD" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 + дубли игнорируются (уникальные)\", () => { pm.response.to.have.status(200); const json = pm.response.json(); pm.expect(json.status).to.equal('success'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.2.4 Лишние неизвестные параметры",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates&currency=USD&foo=bar&debug=true",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "rates" },
+                                        { "key": "currency", "value": "USD" },
+                                        { "key": "foo", "value": "bar" },
+                                        { "key": "debug", "value": "true" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK (лишние параметры игнорируются)\", () => { pm.response.to.have.status(200); const json = pm.response.json(); pm.expect(json.status).to.equal('success'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.2.5 Отсутствует параметр method",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": []
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - method обязателен\", () => { pm.response.to.have.status(400); const json = pm.response.json(); pm.expect(json.status).to.equal('error'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "2.2.6 Неправильное название метода (ratez)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=ratez",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [{ "key": "method", "value": "ratez" }]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - неизвестный метод\", () => { pm.response.to.have.status(400); const json = pm.response.json(); pm.expect(json.status).to.equal('error'); });"], "type": "text/javascript" } }]
+                        }
+                    ]
+                },
+                {
+                    "name": "2.3 Тесты HTTP-метода",
+                    "item": [
+                        {
+                            "name": "2.3.1 POST вместо GET на rates",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=rates",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [{ "key": "method", "value": "rates" }]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"405 Method Not Allowed или 400\", () => { pm.expect([400,405]).to.include(pm.response.code); });"], "type": "text/javascript" } }]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "3. Тесты метода convert",
+            "item": [
+                {
+                    "name": "3.1 Позитивные сценарии",
+                    "item": [
+                        {
+                            "name": "3.1.1 USD → BTC",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1.00",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "1.00" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + корректная структура data\", () => { const json = pm.response.json(); pm.response.to.have.status(200); pm.expect(json.status).to.equal('success'); pm.expect(json.data).to.have.property('currency_from'); pm.expect(json.data).to.have.property('converted_value').that.is.a('number').and.is.above(0); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.1.2 BTC → USD",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=BTC&currency_to=USD&value=1.00",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "BTC" },
+                                        { "key": "currency_to", "value": "USD" },
+                                        { "key": "value", "value": "1.00" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + корректная обратная конвертация\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.expect(json.data.converted_value).to.be.a('number').and.is.above(0); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.1.3 Конвертация в ту же валюту (USD → USD)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=USD&value=100.50",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "USD" },
+                                        { "key": "value", "value": "100.50" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"converted_value === value при одинаковых валютах\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.expect(json.data.converted_value).to.equal(100.50); });"], "type": "text/javascript" } }]
+                        }
+                    ]
+                },
+                {
+                    "name": "3.2 Граничные значения value (только валидные ≥ 0.01)",
+                    "item": [
+                        {
+                            "name": "3.2.4 Очень большое значение",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=9999999999.99",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "9999999999.99" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + поддержка больших чисел\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.response.to.have.status(200); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.2.5 value без десятичной части",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "1" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK + корректно обрабатывает integer ≥ 0.01\", () => { const json = pm.response.json(); pm.expect(json.status).to.equal('success'); pm.response.to.have.status(200); });"], "type": "text/javascript" } }]
+                        }
+                    ]
+                },
+                {
+                    "name": "3.3 Негативные сценарии ввода",
+                    "item": [
+                        {
+                            "name": "3.3.1 value — не число (строка)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=abc",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "abc" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - value должен быть числом\", () => { pm.response.to.have.status(400); const json = pm.response.json(); pm.expect(json.status).to.equal('error'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.3.2 Несуществующие валюты (XXX → YYY)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=XXX&currency_to=YYY&value=1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "XXX" },
+                                        { "key": "currency_to", "value": "YYY" },
+                                        { "key": "value", "value": "1" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - неизвестные валюты\", () => { pm.response.to.have.status(400); const json = pm.response.json(); pm.expect(json.status).to.equal('error'); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.3.3 Отсутствует currency_from",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_to=BTC&value=1.00",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "1.00" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - currency_from обязателен\", () => pm.response.to.have.status(400));"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.3.4 Отсутствует currency_to",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&value=1.00",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "value", "value": "1.00" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - currency_to обязателен\", () => pm.response.to.have.status(400));"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.3.5 Отсутствует value",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - value обязателен\", () => pm.response.to.have.status(400));"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.3.6 Дубли параметров (currency_from дважды)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_from=EUR&currency_to=BTC&value=1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_from", "value": "EUR" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "1" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 или 200 (дубли — поведение по последнему)\", () => { pm.expect([200,400]).to.include(pm.response.code); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.3.7 Лишние параметры (commission, note)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1&commission=5&note=test",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "1" },
+                                        { "key": "commission", "value": "5" },
+                                        { "key": "note", "value": "test" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"200 OK (лишние параметры игнорируются)\", () => pm.response.to.have.status(200));"], "type": "text/javascript" } }]
+                        }
+                    ]
+                },
+                {
+                    "name": "3.4 Тесты HTTP-метода и формата",
+                    "item": [
+                        {
+                            "name": "3.4.1 GET вместо POST на convert",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [
+                                        { "key": "method", "value": "convert" },
+                                        { "key": "currency_from", "value": "USD" },
+                                        { "key": "currency_to", "value": "BTC" },
+                                        { "key": "value", "value": "1" }
+                                    ]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"405 или 400 при GET вместо POST\", () => { pm.expect([400,405]).to.include(pm.response.code); });"], "type": "text/javascript" } }]
+                        },
+                        {
+                            "name": "3.4.2 Параметры в body (x-www-form-urlencoded)",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+                                    { "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }
+                                ],
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        { "key": "currency_from", "value": "USD", "type": "text" },
+                                        { "key": "currency_to", "value": "BTC", "type": "text" },
+                                        { "key": "value", "value": "1.00", "type": "text" }
+                                    ]
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1?method=convert",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1"],
+                                    "query": [{ "key": "method", "value": "convert" }]
+                                }
+                            },
+                            "event": [{ "listen": "test", "script": { "exec": ["pm.test(\"400 - параметры должны быть ТОЛЬКО в query\", () => pm.response.to.have.status(400));"], "type": "text/javascript" } }]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

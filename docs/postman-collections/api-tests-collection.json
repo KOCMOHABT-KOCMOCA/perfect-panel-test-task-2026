@@ -1,0 +1,351 @@
+{
+    "info": {
+        "name": "API Tests - Rates & Convert (из .sh скрипта)",
+        "_postman_id": "generated-from-sh-script",
+        "description": "Полная коллекция всех curl-запросов из твоего bash-скрипта. Организовано по разделам. Используй Collection Runner для массового запуска.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "type": "string"
+        },
+        {
+            "key": "token",
+            "value": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6A7B8C9D0E1F2G3H4",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "1. Общие тесты авторизации",
+            "item": [
+                {
+                    "name": "1.1 Нет заголовка Authorization → ошибка 403",
+                    "request": { "method": "GET", "header": [], "url": { "raw": "{{base_url}}/api/v1?method=rates" } }
+                },
+                {
+                    "name": "1.2 Неправильный токен",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer WRONGTOKEN123", "type": "text" }],
+                        "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                    }
+                },
+                {
+                    "name": "1.3 Правильный токен (базовый успешный запрос)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                        "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                    }
+                },
+                {
+                    "name": "1.4 Токен без \"Bearer \" (только значение)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "{{token}}", "type": "text" }],
+                        "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                    }
+                },
+                {
+                    "name": "1.5 Токен в другом регистре (case-sensitivity)",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                        "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                    }
+                },
+                {
+                    "name": "1.6 Лишний пробел в токене",
+                    "request": {
+                        "method": "GET",
+                        "header": [{ "key": "Authorization", "value": "Bearer  {{token}} ", "type": "text" }],
+                        "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Тесты метода rates",
+            "item": [
+                {
+                    "name": "2.1 Позитивные сценарии",
+                    "item": [
+                        {
+                            "name": "2.1.1 Все курсы (без currency) — проверка сортировки",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                            }
+                        },
+                        {
+                            "name": "2.1.2 Одна валюта (USD)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=USD" }
+                            }
+                        },
+                        {
+                            "name": "2.1.3 Несколько валют (USD,EUR,RUB,BTC)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=USD,EUR,RUB,BTC" }
+                            }
+                        },
+                        {
+                            "name": "2.1.4 Валюты в другом порядке + пробелы (trimming)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=BTC, RUB , EUR" }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "2.2 Негативные и пограничные сценарии",
+                    "item": [
+                        {
+                            "name": "2.2.1 Несуществующая валюта (XXX)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=XXX" }
+                            }
+                        },
+                        {
+                            "name": "2.2.2 Пустое значение currency",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=" }
+                            }
+                        },
+                        {
+                            "name": "2.2.3 Дубли валют (USD,USD,USD)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=USD,USD,USD" }
+                            }
+                        },
+                        {
+                            "name": "2.2.4 Лишние неизвестные параметры (игнорирование)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates&currency=USD&foo=bar&debug=true" }
+                            }
+                        },
+                        {
+                            "name": "2.2.5 Отсутствует параметр method",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1" }
+                            }
+                        },
+                        {
+                            "name": "2.2.6 Неправильное название метода (ratez)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=ratez" }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "2.3 Тесты HTTP-метода",
+                    "item": [
+                        {
+                            "name": "2.3.1 POST вместо GET на rates (должен отдавать ошибку)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=rates" }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "3. Тесты метода convert",
+            "item": [
+                {
+                    "name": "3.1 Позитивные сценарии",
+                    "item": [
+                        {
+                            "name": "3.1.1 USD → BTC",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1.00" }
+                            }
+                        },
+                        {
+                            "name": "3.1.2 BTC → USD",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=BTC&currency_to=USD&value=1.00" }
+                            }
+                        },
+                        {
+                            "name": "3.1.3 Конвертация в ту же валюту (USD → USD)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=USD&value=100.50" }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "3.2 Граничные значения value",
+                    "item": [
+                        {
+                            "name": "3.2.1 Zero value",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=0" }
+                            }
+                        },
+                        {
+                            "name": "3.2.2 Negative value",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=-50.25" }
+                            }
+                        },
+                        {
+                            "name": "3.2.3 Очень маленькое значение",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=0.0000000001" }
+                            }
+                        },
+                        {
+                            "name": "3.2.4 Очень большое значение",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=9999999999.99" }
+                            }
+                        },
+                        {
+                            "name": "3.2.5 value без десятичной части",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1" }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "3.3 Негативные сценарии ввода",
+                    "item": [
+                        {
+                            "name": "3.3.1 value — не число (строка)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=abc" }
+                            }
+                        },
+                        {
+                            "name": "3.3.2 Несуществующие валюты (XXX → YYY)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=XXX&currency_to=YYY&value=1" }
+                            }
+                        },
+                        {
+                            "name": "3.3.3 Отсутствует currency_from",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_to=BTC&value=1.00" }
+                            }
+                        },
+                        {
+                            "name": "3.3.4 Отсутствует currency_to",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&value=1.00" }
+                            }
+                        },
+                        {
+                            "name": "3.3.5 Отсутствует value",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC" }
+                            }
+                        },
+                        {
+                            "name": "3.3.6 Дубли параметров (currency_from дважды)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_from=EUR&currency_to=BTC&value=1" }
+                            }
+                        },
+                        {
+                            "name": "3.3.7 Лишние параметры (commission, note)",
+                            "request": {
+                                "method": "POST",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1&commission=5&note=test" }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "3.4 Тесты HTTP-метода и формата",
+                    "item": [
+                        {
+                            "name": "3.4.1 GET вместо POST на convert (должен отдавать ошибку)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert&currency_from=USD&currency_to=BTC&value=1" }
+                            }
+                        },
+                        {
+                            "name": "3.4.2 Параметры в body (x-www-form-urlencoded) — проверка query-string",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+                                    { "key": "Content-Type", "value": "application/x-www-form-urlencoded", "type": "text" }
+                                ],
+                                "body": {
+                                    "mode": "urlencoded",
+                                    "urlencoded": [
+                                        { "key": "currency_from", "value": "USD", "type": "text" },
+                                        { "key": "currency_to", "value": "BTC", "type": "text" },
+                                        { "key": "value", "value": "1.00", "type": "text" }
+                                    ]
+                                },
+                                "url": { "raw": "{{base_url}}/api/v1?method=convert" }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
