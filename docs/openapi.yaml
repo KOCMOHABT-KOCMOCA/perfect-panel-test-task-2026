@@ -1,0 +1,185 @@
+openapi: 3.1.0
+info:
+  title: Currency Exchange API
+  description: |
+    Реализация API для тестового задания
+    - Формат запросов `?method=rates|convert`
+    - Авторизация Bearer-токен (64 символа)
+    - Все ответы сервера в формате JSON
+    - Кэширование курсов 5 минут
+  version: "1.0.0"
+  contact:
+    name: kosmonavt_kosmosa
+    url: https://github.com/kocmohabt-kocmoca
+
+servers:
+  - url: http://localhost:8080
+    description: Local Docker environment
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: "64-character token"
+      description: "Bearer токен из .env (CURRENCY_TOKEN)"
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        code:
+          type: integer
+          example: 200
+        data:
+          type: object
+          additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "Invalid token | Unknown method | Minimum amount is 0.01"
+
+paths:
+  /api/v1:
+    get:
+      summary: Получение курсов валют (method=rates)
+      description: Возвращает курсы с комиссией 2%. Поддерживает фильтр по валютам.
+      tags:
+        - Currency
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: method
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [rates]
+          example: rates
+        - name: currency
+          in: query
+          description: "Фильтр по валютам (через запятую). Пример: BTC,ETH,USD"
+          schema:
+            type: string
+          example: BTC,ETH,USD
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                ratesAll:
+                  summary: Все курсы (сортировка по возрастанию)
+                  value:
+                    status: "success"
+                    code: 200
+                    data:
+                      USD: 1
+                      ETH: 3060
+                      BTC: 66300
+                ratesFiltered:
+                  summary: Только указанные валюты
+                  value:
+                    status: "success"
+                    code: 200
+                    data:
+                      BTC: 66300
+                      USD: 1
+        '400':
+          description: Ошибка запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ошибка авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Конвертация валюты (method=convert)
+      description: Конвертация с учётом комиссии 2% округлением.
+      tags:
+        - Currency
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: method
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [convert]
+          example: convert
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                currency_from:
+                  type: string
+                  example: BTC
+                currency_to:
+                  type: string
+                  example: USD
+                value:
+                  type: number
+                  format: float
+                  minimum: 0.01
+                  example: 0.5
+              required:
+                - currency_from
+                - currency_to
+                - value
+      responses:
+        '200':
+          description: Успешная конвертация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              examples:
+                convertExample:
+                  summary: BTC → USD
+                  value:
+                    status: "success"
+                    code: 200
+                    data:
+                      currency_from: "BTC"
+                      currency_to: "USD"
+                      value: 0.5
+                      converted_value: 31824.00
+                      rate: 0.0000151515
+        '400':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Ошибка авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
